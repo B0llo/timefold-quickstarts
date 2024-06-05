@@ -25,6 +25,9 @@ public class Vehicle {
 
     private LocalDateTime departureTime;
 
+    // TODO 1: ADDING THE FIELD
+    private LocalDateTime maxLastVisitDepartureTime;
+
     @JsonIdentityReference(alwaysAsId = true)
     @PlanningListVariable
     private List<Visit> visits;
@@ -38,6 +41,14 @@ public class Vehicle {
         this.homeLocation = homeLocation;
         this.departureTime = departureTime;
         this.visits = new ArrayList<>();
+    }
+
+    public Vehicle(String id, int capacity, Location homeLocation, LocalDateTime departureTime, LocalDateTime maxLastVisitDepartureTime) {
+        this.id = id;
+        this.capacity = capacity;
+        this.homeLocation = homeLocation;
+        this.departureTime = departureTime;
+        this.maxLastVisitDepartureTime = maxLastVisitDepartureTime;
     }
 
     public String getId() {
@@ -66,6 +77,9 @@ public class Vehicle {
 
     public LocalDateTime getDepartureTime() {
         return departureTime;
+    }
+    public LocalDateTime getMaxLastVisitDepartureTime() {
+        return maxLastVisitDepartureTime;
     }
 
     public List<Visit> getVisits() {
