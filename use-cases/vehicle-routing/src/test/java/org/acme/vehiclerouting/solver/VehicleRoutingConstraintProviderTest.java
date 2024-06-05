@@ -116,6 +116,39 @@ class VehicleRoutingConstraintProviderTest {
                 .penalizesBy(1);
     }
 
+    // TODO 0: MAKE A TEST TO DETERMINE IF THE CONSTRAINT WORKS
+    @Test
+    void vehicleLeftAfterMaxLastVisitDepartureTime() {
+        LocalDateTime tomorrow_07_00 = LocalDateTime.of(TOMORROW, LocalTime.of(7, 0));
+        LocalDateTime tomorrow_08_00 = LocalDateTime.of(TOMORROW, LocalTime.of(8, 0));
+        LocalDateTime tomorrow_08_40 = LocalDateTime.of(TOMORROW, LocalTime.of(8, 40));
+        LocalDateTime tomorrow_09_00 = LocalDateTime.of(TOMORROW, LocalTime.of(9, 0));
+        LocalDateTime tomorrow_10_30 = LocalDateTime.of(TOMORROW, LocalTime.of(10, 30));
+        LocalDateTime tomorrow_16_30 = LocalDateTime.of(TOMORROW, LocalTime.of(16, 30));
+        LocalDateTime tomorrow_17_00 = LocalDateTime.of(TOMORROW, LocalTime.of(17, 0));
+        LocalDateTime tomorrow_18_00 = LocalDateTime.of(TOMORROW, LocalTime.of(18, 0));
+
+        Visit visit1 = new Visit("2", "John", LOCATION_2, 80, tomorrow_08_00, tomorrow_18_00, Duration.ofHours(1L));
+        visit1.setArrivalTime(tomorrow_08_40);
+        Visit visit2 = new Visit("3", "Paul", LOCATION_3, 40, tomorrow_08_00, tomorrow_09_00, Duration.ofHours(1L));
+        visit2.setArrivalTime(tomorrow_10_30);
+        Vehicle vehicleA = new Vehicle("1", 100, LOCATION_1, tomorrow_07_00, tomorrow_17_00);
+
+        connect(vehicleA, visit1, visit2);
+
+        // Should depart before max value
+        constraintVerifier.verifyThat(VehicleRoutingConstraintProvider::vehicleLeavesAfterMaxLastVisitDepartureTime)
+                .given(vehicleA, visit1, visit2)
+                .penalizesBy(0);
+
+        visit2.setArrivalTime(tomorrow_16_30);
+
+        // Should depart after max value
+        constraintVerifier.verifyThat(VehicleRoutingConstraintProvider::vehicleLeavesAfterMaxLastVisitDepartureTime)
+                .given(vehicleA, visit1, visit2)
+                .penalizesBy(30);
+    }
+
     static void connect(Vehicle vehicle, Visit... visits) {
         vehicle.setVisits(Arrays.asList(visits));
         for (int i = 0; i < visits.length; i++) {
