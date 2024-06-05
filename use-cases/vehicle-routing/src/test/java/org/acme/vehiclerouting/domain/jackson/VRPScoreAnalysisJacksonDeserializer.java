@@ -8,6 +8,7 @@ import org.acme.vehiclerouting.solver.VehicleRoutingConstraintProvider;
 import org.acme.vehiclerouting.solver.justifications.MinimizeTravelTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.ServiceFinishedAfterMaxEndTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.VehicleCapacityJustification;
+import org.acme.vehiclerouting.solver.justifications.VehicleLeftAfterMaxLastVisitDepartureTimeJustification;
 
 public class VRPScoreAnalysisJacksonDeserializer extends AbstractScoreAnalysisJacksonDeserializer<HardSoftLongScore> {
 
@@ -28,6 +29,9 @@ public class VRPScoreAnalysisJacksonDeserializer extends AbstractScoreAnalysisJa
                 return (Class<ConstraintJustification_>) VehicleCapacityJustification.class;
             case VehicleRoutingConstraintProvider.SERVICE_FINISHED_AFTER_MAX_END_TIME:
                 return (Class<ConstraintJustification_>) ServiceFinishedAfterMaxEndTimeJustification.class;
+            case VehicleRoutingConstraintProvider.VEHICLE_LEFT_AFTER_MAX_LAST_VISIT_DEPARTURE_TIME:
+                // TODO 3: MAKE A CUSTOM JUSTIFICATION FOR THIS CONSTRAINT VIOLATION
+                return (Class<ConstraintJustification_>) VehicleLeftAfterMaxLastVisitDepartureTimeJustification.class;
             default:
                 throw new UnsupportedOperationException("Deserialization of (%s) constraint not supported, please extend %s."
                         .formatted(constraintRef.constraintName(), this.getClass().getName()));
