@@ -1,24 +1,17 @@
 package org.acme.vehiclerouting.domain;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
-
 import ai.timefold.solver.core.api.domain.entity.PlanningEntity;
 import ai.timefold.solver.core.api.domain.lookup.PlanningId;
 import ai.timefold.solver.core.api.domain.variable.InverseRelationShadowVariable;
 import ai.timefold.solver.core.api.domain.variable.NextElementShadowVariable;
 import ai.timefold.solver.core.api.domain.variable.PreviousElementShadowVariable;
 import ai.timefold.solver.core.api.domain.variable.ShadowVariable;
-
+import com.fasterxml.jackson.annotation.*;
 import org.acme.vehiclerouting.solver.ArrivalTimeUpdatingVariableListener;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIdentityReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @JsonIdentityInfo(scope = Visit.class, generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @PlanningEntity
@@ -49,8 +42,7 @@ public class Visit {
     public Visit() {
     }
 
-    public Visit(String id, String name, Location location, int demand,
-                 LocalDateTime minStartTime, LocalDateTime maxEndTime, Duration serviceDuration) {
+    public Visit(String id, String name, Location location, int demand, LocalDateTime minStartTime, LocalDateTime maxEndTime, Duration serviceDuration) {
         this.id = id;
         this.name = name;
         this.location = location;
@@ -58,6 +50,15 @@ public class Visit {
         this.minStartTime = minStartTime;
         this.maxEndTime = maxEndTime;
         this.serviceDuration = serviceDuration;
+    }
+
+    private static long roundDurationToNextOrEqualMinutes(Duration duration) {
+        var remainder = duration.minus(duration.truncatedTo(ChronoUnit.MINUTES));
+        var minutes = duration.toMinutes();
+        if (remainder.equals(Duration.ZERO)) {
+            return minutes;
+        }
+        return minutes + 1;
     }
 
     public String getId() {
@@ -154,8 +155,7 @@ public class Visit {
 
     @JsonIgnore
     public boolean isServiceFinishedAfterMaxEndTime() {
-        return arrivalTime != null
-                && arrivalTime.plus(serviceDuration).isAfter(maxEndTime);
+        return arrivalTime != null && arrivalTime.plus(serviceDuration).isAfter(maxEndTime);
     }
 
     @JsonIgnore
@@ -166,20 +166,24 @@ public class Visit {
         return roundDurationToNextOrEqualMinutes(Duration.between(maxEndTime, arrivalTime.plus(serviceDuration)));
     }
 
-    private static long roundDurationToNextOrEqualMinutes(Duration duration) {
-        var remainder = duration.minus(duration.truncatedTo(ChronoUnit.MINUTES));
-        var minutes = duration.toMinutes();
-        if (remainder.equals(Duration.ZERO)) {
-            return minutes;
+    //    TODO 4: adding calculation to see if last visit is past maxTime
+    @JsonIgnore
+    public boolean didVehicleLeaveAfterMaxDepartureTime() {
+        return arrivalTime != null && arrivalTime.plus(serviceDuration).isAfter(vehicle.getMaxLastVisitDepartureTime());
+    }
+
+    @JsonIgnore
+    public long getVehicleDepartureDelayInMinutes() {
+        if (arrivalTime == null) {
+            return 0;
         }
-        return minutes + 1;
+        return roundDurationToNextOrEqualMinutes(Duration.between(vehicle.getMaxLastVisitDepartureTime(), arrivalTime.plus(serviceDuration)));
     }
 
     @JsonIgnore
     public long getDrivingTimeSecondsFromPreviousStandstill() {
         if (vehicle == null) {
-            throw new IllegalStateException(
-                    "This method must not be called when the shadow variables are not initialized yet.");
+            throw new IllegalStateException("This method must not be called when the shadow variables are not initialized yet.");
         }
         if (previousVisit == null) {
             return vehicle.getHomeLocation().getDrivingTimeTo(location);
