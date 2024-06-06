@@ -1,22 +1,25 @@
 package org.acme.vehiclerouting.domain;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+@JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public class FloatingBreak {
-    private boolean isOver;
-    private final Duration duration;
+    private Duration duration;
+    private LocalDateTime triggerTime;
 
-    private final LocalDateTime triggerTime;
+    public FloatingBreak() {
+    }
 
     public FloatingBreak(LocalDateTime triggerTime, Duration duration) {
-        this.isOver = false;
         this.triggerTime = triggerTime;
         this.duration = duration;
     }
 
-    public boolean isOver() {
-        return isOver;
+    public Duration getDuration() {
+        return duration;
     }
 
     public LocalDateTime getTriggerTime() {
@@ -24,7 +27,6 @@ public class FloatingBreak {
     }
 
     public Duration doBrake() {
-        isOver = true;
         return duration;
     }
 }

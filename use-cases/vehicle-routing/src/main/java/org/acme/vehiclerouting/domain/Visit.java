@@ -130,12 +130,19 @@ public class Visit {
         return arrivalTime;
     }
 
+    public void setArrivalTime(LocalDateTime arrivalTime) {
+        this.arrivalTime = arrivalTime;
+    }
     // ************************************************************************
     // Complex methods
     // ************************************************************************
 
-    public void setArrivalTime(LocalDateTime arrivalTime) {
-        this.arrivalTime = arrivalTime;
+
+    public boolean hadABreakHere() {
+        return arrivalTime.plus(serviceDuration).isBefore(getDepartureTime());
+    }
+    public boolean hadNoBreakHere() {
+        return !arrivalTime.plus(serviceDuration).isBefore(getDepartureTime());
     }
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -144,8 +151,11 @@ public class Visit {
             return null;
         }
         FloatingBreak floatingBreak = vehicle.getFloatingBreak();
-        if (floatingBreak != null && floatingBreak.getTriggerTime().isBefore(arrivalTime) && !floatingBreak.isOver()) {
-            return getStartServiceTime().plus(floatingBreak.doBrake()).plus(serviceDuration);
+        if (floatingBreak != null
+                && floatingBreak.getTriggerTime().isBefore(arrivalTime)
+                && previousVisit.arrivalTime.isBefore(floatingBreak.getTriggerTime())) {
+            Duration brakeDuration  = floatingBreak.doBrake();
+            return getStartServiceTime().plus(brakeDuration).plus(serviceDuration);
         }
         return getStartServiceTime().plus(serviceDuration);
     }

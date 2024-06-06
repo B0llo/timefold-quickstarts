@@ -136,8 +136,4 @@ public class Vehicle {
     public String toString() {
         return id;
     }
-
-    public boolean hadABreak() {
-        return floatingBreak != null && floatingBreak.isOver();
-    }
 }

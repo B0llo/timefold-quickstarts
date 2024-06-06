@@ -7,7 +7,7 @@ import ai.timefold.solver.core.api.score.stream.ConstraintProvider;
 
 import org.acme.vehiclerouting.domain.Visit;
 import org.acme.vehiclerouting.domain.Vehicle;
-import org.acme.vehiclerouting.solver.justifications.AllowFloatingBreaksJustification;
+import org.acme.vehiclerouting.solver.justifications.DoFloatingBreaksJustification;
 import org.acme.vehiclerouting.solver.justifications.MinimizeTravelTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.ServiceFinishedAfterMaxEndTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.VehicleCapacityJustification;
@@ -17,7 +17,7 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
     public static final String VEHICLE_CAPACITY = "vehicleCapacity";
     public static final String SERVICE_FINISHED_AFTER_MAX_END_TIME = "serviceFinishedAfterMaxEndTime";
     public static final String MINIMIZE_TRAVEL_TIME = "minimizeTravelTime";
-    public static final String ALLOW_FLOATING_BREAKS = "allowFloatingBreaks";
+    public static final String DO_FLOATING_BREAKS = "doFloatingBreaks";
 
     @Override
     public Constraint[] defineConstraints(ConstraintFactory factory) {
@@ -25,7 +25,7 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
                 vehicleCapacity(factory),
                 serviceFinishedAfterMaxEndTime(factory),
                 minimizeTravelTime(factory),
-                allowFloatingBreaks(factory)
+                doFloatingBreaks(factory)
         };
     }
 
@@ -52,6 +52,14 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
                         visit.getServiceFinishedDelayInMinutes()))
                 .asConstraint(SERVICE_FINISHED_AFTER_MAX_END_TIME);
     }
+    protected Constraint doFloatingBreaks(ConstraintFactory factory) {
+        return factory.forEach(Visit.class)
+                .filter(Visit::hadNoBreakHere)
+                .penalize(HardSoftLongScore.ONE_HARD)
+                .justifyWith((visit, score) -> new DoFloatingBreaksJustification(visit.getId(),
+                        visit.hadABreakHere()))
+                .asConstraint(DO_FLOATING_BREAKS);
+    }
 
     // ************************************************************************
     // Soft constraints
@@ -65,12 +73,5 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
                         vehicle.getTotalDrivingTimeSeconds()))
                 .asConstraint(MINIMIZE_TRAVEL_TIME);
     }
-    protected Constraint allowFloatingBreaks(ConstraintFactory factory) {
-        return factory.forEach(Vehicle.class)
-                .filter(Vehicle::hadABreak)
-                .reward(HardSoftLongScore.ONE_SOFT)
-                .justifyWith((vehicle, score) -> new AllowFloatingBreaksJustification(vehicle.getId(),
-                        vehicle.hadABreak()))
-                .asConstraint(ALLOW_FLOATING_BREAKS);
-    }
+
 }
