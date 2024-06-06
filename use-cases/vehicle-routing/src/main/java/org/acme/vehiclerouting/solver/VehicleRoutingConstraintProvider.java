@@ -7,6 +7,7 @@ import ai.timefold.solver.core.api.score.stream.ConstraintProvider;
 
 import org.acme.vehiclerouting.domain.Visit;
 import org.acme.vehiclerouting.domain.Vehicle;
+import org.acme.vehiclerouting.solver.justifications.AllowFloatingBreaksJustification;
 import org.acme.vehiclerouting.solver.justifications.MinimizeTravelTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.ServiceFinishedAfterMaxEndTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.VehicleCapacityJustification;
@@ -16,13 +17,15 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
     public static final String VEHICLE_CAPACITY = "vehicleCapacity";
     public static final String SERVICE_FINISHED_AFTER_MAX_END_TIME = "serviceFinishedAfterMaxEndTime";
     public static final String MINIMIZE_TRAVEL_TIME = "minimizeTravelTime";
+    public static final String ALLOW_FLOATING_BREAKS = "allowFloatingBreaks";
 
     @Override
     public Constraint[] defineConstraints(ConstraintFactory factory) {
         return new Constraint[] {
                 vehicleCapacity(factory),
                 serviceFinishedAfterMaxEndTime(factory),
-                minimizeTravelTime(factory)
+                minimizeTravelTime(factory),
+                allowFloatingBreaks(factory)
         };
     }
 
@@ -61,5 +64,13 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
                 .justifyWith((vehicle, score) -> new MinimizeTravelTimeJustification(vehicle.getId(),
                         vehicle.getTotalDrivingTimeSeconds()))
                 .asConstraint(MINIMIZE_TRAVEL_TIME);
+    }
+    protected Constraint allowFloatingBreaks(ConstraintFactory factory) {
+        return factory.forEach(Vehicle.class)
+                .filter(Vehicle::hadABreak)
+                .reward(HardSoftLongScore.ONE_SOFT)
+                .justifyWith((vehicle, score) -> new AllowFloatingBreaksJustification(vehicle.getId(),
+                        vehicle.hadABreak()))
+                .asConstraint(ALLOW_FLOATING_BREAKS);
     }
 }
