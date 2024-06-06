@@ -1,5 +1,6 @@
 package org.acme.vehiclerouting.domain;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,10 +9,9 @@ import ai.timefold.solver.core.api.domain.entity.PlanningEntity;
 import ai.timefold.solver.core.api.domain.lookup.PlanningId;
 import ai.timefold.solver.core.api.domain.variable.PlanningListVariable;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIdentityReference;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.annotation.*;
+
+import static org.acme.vehiclerouting.domain.Visit.roundDurationToNextOrEqualMinutes;
 
 @JsonIdentityInfo(scope = Vehicle.class, generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @PlanningEntity
@@ -131,9 +131,32 @@ public class Vehicle {
         return lastVisit.getDepartureTime().plusSeconds(lastVisit.getLocation().getDrivingTimeTo(homeLocation));
     }
 
+    @JsonIgnore
+    public boolean didVehicleLeaveAfterMaxLastVisitDepartureTime() {
+        if (visits.isEmpty()) {
+            return false;
+        }
+        Visit lastVisit = visits.get(visits.size() - 1);
+        return lastVisit.getDepartureTime().isAfter(maxLastVisitDepartureTime);
+    }
+    @JsonIgnore
+    public long getLastVisitDepartureDelayInMinutes() {
+        if (visits.isEmpty()) {
+            return 0;
+        }
+        Visit lastVisit = visits.get(visits.size() -1);
+        return roundDurationToNextOrEqualMinutes(Duration.between(maxLastVisitDepartureTime, lastVisit.getDepartureTime()));
+    }
+    @JsonIgnore
+    public LocalDateTime getLastVisitDepartureTime() {
+        Visit lastVisit = visits.get(visits.size() -1);
+        return lastVisit.getDepartureTime();
+    }
+
     @Override
     public String toString() {
         return id;
     }
+
 
 }

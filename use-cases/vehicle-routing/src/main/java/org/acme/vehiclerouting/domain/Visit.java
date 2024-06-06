@@ -52,7 +52,7 @@ public class Visit {
         this.serviceDuration = serviceDuration;
     }
 
-    private static long roundDurationToNextOrEqualMinutes(Duration duration) {
+    static long roundDurationToNextOrEqualMinutes(Duration duration) {
         var remainder = duration.minus(duration.truncatedTo(ChronoUnit.MINUTES));
         var minutes = duration.toMinutes();
         if (remainder.equals(Duration.ZERO)) {
@@ -168,8 +168,8 @@ public class Visit {
 
     //    TODO 4: adding calculation to see if last visit is past maxTime
     @JsonIgnore
-    public boolean didVehicleLeaveAfterMaxDepartureTime() {
-        return arrivalTime != null && arrivalTime.plus(serviceDuration).isAfter(vehicle.getMaxLastVisitDepartureTime());
+    public boolean didVehicleLeaveAfterMaxLastVisitDepartureTime() {
+        return arrivalTime != null && getDepartureTime().isAfter(vehicle.getMaxLastVisitDepartureTime());
     }
 
     @JsonIgnore
@@ -177,7 +177,7 @@ public class Visit {
         if (arrivalTime == null) {
             return 0;
         }
-        return roundDurationToNextOrEqualMinutes(Duration.between(vehicle.getMaxLastVisitDepartureTime(), arrivalTime.plus(serviceDuration)));
+        return roundDurationToNextOrEqualMinutes(Duration.between(vehicle.getMaxLastVisitDepartureTime(), getDepartureTime()));
     }
 
     @JsonIgnore
