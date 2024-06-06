@@ -29,7 +29,18 @@ public class Vehicle {
     @PlanningListVariable
     private List<Visit> visits;
 
+    private FloatingBreak floatingBreak;
+
     public Vehicle() {
+    }
+
+    public Vehicle(String id, int capacity, Location homeLocation, LocalDateTime departureTime, FloatingBreak floatingBreak) {
+        this.id = id;
+        this.capacity = capacity;
+        this.homeLocation = homeLocation;
+        this.departureTime = departureTime;
+        this.floatingBreak = floatingBreak;
+        this.visits = new ArrayList<>();
     }
 
     public Vehicle(String id, int capacity, Location homeLocation, LocalDateTime departureTime) {
@@ -74,6 +85,10 @@ public class Vehicle {
 
     public void setVisits(List<Visit> visits) {
         this.visits = visits;
+    }
+
+    public FloatingBreak getFloatingBreak() {
+        return floatingBreak;
     }
 
     // ************************************************************************
@@ -122,4 +137,7 @@ public class Vehicle {
         return id;
     }
 
+    public boolean hadABreak() {
+        return floatingBreak != null && floatingBreak.isOver();
+    }
 }

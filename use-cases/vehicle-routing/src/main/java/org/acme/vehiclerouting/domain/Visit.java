@@ -1,24 +1,17 @@
 package org.acme.vehiclerouting.domain;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
-
 import ai.timefold.solver.core.api.domain.entity.PlanningEntity;
 import ai.timefold.solver.core.api.domain.lookup.PlanningId;
 import ai.timefold.solver.core.api.domain.variable.InverseRelationShadowVariable;
 import ai.timefold.solver.core.api.domain.variable.NextElementShadowVariable;
 import ai.timefold.solver.core.api.domain.variable.PreviousElementShadowVariable;
 import ai.timefold.solver.core.api.domain.variable.ShadowVariable;
-
+import com.fasterxml.jackson.annotation.*;
 import org.acme.vehiclerouting.solver.ArrivalTimeUpdatingVariableListener;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIdentityReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @JsonIdentityInfo(scope = Visit.class, generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @PlanningEntity
@@ -58,6 +51,15 @@ public class Visit {
         this.minStartTime = minStartTime;
         this.maxEndTime = maxEndTime;
         this.serviceDuration = serviceDuration;
+    }
+
+    private static long roundDurationToNextOrEqualMinutes(Duration duration) {
+        var remainder = duration.minus(duration.truncatedTo(ChronoUnit.MINUTES));
+        var minutes = duration.toMinutes();
+        if (remainder.equals(Duration.ZERO)) {
+            return minutes;
+        }
+        return minutes + 1;
     }
 
     public String getId() {
@@ -128,18 +130,22 @@ public class Visit {
         return arrivalTime;
     }
 
-    public void setArrivalTime(LocalDateTime arrivalTime) {
-        this.arrivalTime = arrivalTime;
-    }
-
     // ************************************************************************
     // Complex methods
     // ************************************************************************
+
+    public void setArrivalTime(LocalDateTime arrivalTime) {
+        this.arrivalTime = arrivalTime;
+    }
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public LocalDateTime getDepartureTime() {
         if (arrivalTime == null) {
             return null;
+        }
+        FloatingBreak floatingBreak = vehicle.getFloatingBreak();
+        if (floatingBreak != null && floatingBreak.getTriggerTime().isBefore(arrivalTime) && !floatingBreak.isOver()) {
+            return getStartServiceTime().plus(floatingBreak.doBrake()).plus(serviceDuration);
         }
         return getStartServiceTime().plus(serviceDuration);
     }
@@ -164,15 +170,6 @@ public class Visit {
             return 0;
         }
         return roundDurationToNextOrEqualMinutes(Duration.between(maxEndTime, arrivalTime.plus(serviceDuration)));
-    }
-
-    private static long roundDurationToNextOrEqualMinutes(Duration duration) {
-        var remainder = duration.minus(duration.truncatedTo(ChronoUnit.MINUTES));
-        var minutes = duration.toMinutes();
-        if (remainder.equals(Duration.ZERO)) {
-            return minutes;
-        }
-        return minutes + 1;
     }
 
     @JsonIgnore
