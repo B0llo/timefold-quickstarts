@@ -1,24 +1,18 @@
 package org.acme.vehiclerouting.solver;
 
+import ai.timefold.solver.test.api.score.stream.ConstraintVerifier;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import org.acme.vehiclerouting.domain.*;
+import org.acme.vehiclerouting.domain.geo.HaversineDrivingTimeCalculator;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Arrays;
-
-import jakarta.inject.Inject;
-
-import ai.timefold.solver.test.api.score.stream.ConstraintVerifier;
-
-import org.acme.vehiclerouting.domain.Location;
-import org.acme.vehiclerouting.domain.Vehicle;
-import org.acme.vehiclerouting.domain.VehicleRoutePlan;
-import org.acme.vehiclerouting.domain.Visit;
-import org.acme.vehiclerouting.domain.geo.HaversineDrivingTimeCalculator;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class VehicleRoutingConstraintProviderTest {
@@ -39,6 +33,20 @@ class VehicleRoutingConstraintProviderTest {
     @BeforeAll
     static void initDrivingTimeMaps() {
         HaversineDrivingTimeCalculator.getInstance().initDrivingTimeMaps(Arrays.asList(LOCATION_1, LOCATION_2, LOCATION_3));
+    }
+
+    static void connect(Vehicle vehicle, Visit... visits) {
+        vehicle.setVisits(Arrays.asList(visits));
+        for (int i = 0; i < visits.length; i++) {
+            Visit visit = visits[i];
+            visit.setVehicle(vehicle);
+            if (i > 0) {
+                visit.setPreviousVisit(visits[i - 1]);
+            }
+            if (i < visits.length - 1) {
+                visit.setNextVisit(visits[i + 1]);
+            }
+        }
     }
 
     @Test
@@ -116,17 +124,55 @@ class VehicleRoutingConstraintProviderTest {
                 .penalizesBy(1);
     }
 
-    static void connect(Vehicle vehicle, Visit... visits) {
-        vehicle.setVisits(Arrays.asList(visits));
-        for (int i = 0; i < visits.length; i++) {
-            Visit visit = visits[i];
-            visit.setVehicle(vehicle);
-            if (i > 0) {
-                visit.setPreviousVisit(visits[i - 1]);
-            }
-            if (i < visits.length - 1) {
-                visit.setNextVisit(visits[i + 1]);
-            }
-        }
+    @Test
+    void allowFloatingBreaksCheckReward() {
+        LocalDateTime tomorrow_07_00 = LocalDateTime.of(TOMORROW, LocalTime.of(7, 0));
+        LocalDateTime tomorrow_08_00 = LocalDateTime.of(TOMORROW, LocalTime.of(8, 0));
+        LocalDateTime tomorrow_08_40 = LocalDateTime.of(TOMORROW, LocalTime.of(8, 40));
+        LocalDateTime tomorrow_09_00 = LocalDateTime.of(TOMORROW, LocalTime.of(9, 0));
+        LocalDateTime tomorrow_10_30 = LocalDateTime.of(TOMORROW, LocalTime.of(10, 30));
+        LocalDateTime tomorrow_18_00 = LocalDateTime.of(TOMORROW, LocalTime.of(18, 0));
+
+        FloatingBreak floatingBreak_after_09_00 = new FloatingBreak(tomorrow_09_00, Duration.ofMinutes(30));
+
+        Visit visit1 = new Visit("2", "John", LOCATION_2, 80, tomorrow_08_00, tomorrow_18_00, Duration.ofHours(1L));
+        visit1.setArrivalTime(tomorrow_08_40);
+        visit1.getDepartureTime();
+        Visit visit2 = new Visit("3", "Paul", LOCATION_3, 40, tomorrow_08_00, tomorrow_18_00, Duration.ofHours(1L));
+        visit2.setArrivalTime(tomorrow_10_30);
+        visit2.getDepartureTime();
+        Vehicle vehicleA = new Vehicle("1", 100, LOCATION_1, tomorrow_07_00, floatingBreak_after_09_00);
+
+        connect(vehicleA, visit1, visit2);
+
+        constraintVerifier.verifyThat(VehicleRoutingConstraintProvider::allowFloatingBreaks)
+                .given(vehicleA, visit1, visit2)
+                .rewards();
+    }
+
+    @Test
+    void allowFloatingBreaksCheckNoReward() {
+        LocalDateTime tomorrow_07_00 = LocalDateTime.of(TOMORROW, LocalTime.of(7, 0));
+        LocalDateTime tomorrow_08_00 = LocalDateTime.of(TOMORROW, LocalTime.of(8, 0));
+        LocalDateTime tomorrow_08_40 = LocalDateTime.of(TOMORROW, LocalTime.of(8, 40));
+        LocalDateTime tomorrow_10_30 = LocalDateTime.of(TOMORROW, LocalTime.of(10, 30));
+        LocalDateTime tomorrow_12_00 = LocalDateTime.of(TOMORROW, LocalTime.of(12, 0));
+        LocalDateTime tomorrow_18_00 = LocalDateTime.of(TOMORROW, LocalTime.of(18, 0));
+
+        FloatingBreak floatingBreak_after_12_00 = new FloatingBreak(tomorrow_12_00, Duration.ofMinutes(30));
+
+        Visit visit1 = new Visit("2", "John", LOCATION_2, 80, tomorrow_08_00, tomorrow_18_00, Duration.ofHours(1L));
+        visit1.setArrivalTime(tomorrow_08_40);
+        visit1.getDepartureTime();
+        Visit visit2 = new Visit("3", "Paul", LOCATION_3, 40, tomorrow_08_00, tomorrow_18_00, Duration.ofHours(1L));
+        visit2.setArrivalTime(tomorrow_10_30);
+        visit2.getDepartureTime();
+        Vehicle vehicleA = new Vehicle("1", 100, LOCATION_1, tomorrow_07_00, floatingBreak_after_12_00);
+
+        connect(vehicleA, visit1, visit2);
+
+        constraintVerifier.verifyThat(VehicleRoutingConstraintProvider::allowFloatingBreaks)
+                .given(vehicleA, visit1, visit2)
+                .rewards(0);
     }
 }
