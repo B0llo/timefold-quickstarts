@@ -61,14 +61,14 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
      *
      */
     protected Constraint vehicleLeavesAfterMaxLastVisitDepartureTime(ConstraintFactory factory) {
-        return factory.forEach(Vehicle.class)
-                .filter(Vehicle::didVehicleLeaveAfterMaxLastVisitDepartureTime)
+        return factory.forEach(Visit.class)
+                .filter(Visit::didVehicleLeaveAfterMaxLastVisitDepartureTime)
                 // TODO X: DETERMINE PENALTY
                 .penalizeLong(HardSoftLongScore.ONE_HARD,
-                        Vehicle::getLastVisitDepartureDelayInMinutes)
-                .justifyWith((vehicle, score) -> new VehicleLeftAfterMaxLastVisitDepartureTimeJustification(vehicle.getId(),
-                        vehicle.getLastVisitDepartureTime(),
-                        vehicle.getMaxLastVisitDepartureTime()))
+                        Visit::getLastVisitDepartureDelayInMinutes)
+                .justifyWith((visit, score) -> new VehicleLeftAfterMaxLastVisitDepartureTimeJustification(visit.getId(),
+                        visit.getDepartureTime(),
+                        visit.getVehicle().getMaxLastVisitDepartureTime()))
                 .asConstraint(VEHICLE_LEFT_AFTER_MAX_LAST_VISIT_DEPARTURE_TIME);
     }
 

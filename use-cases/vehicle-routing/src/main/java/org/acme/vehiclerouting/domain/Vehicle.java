@@ -139,19 +139,6 @@ public class Vehicle {
         Visit lastVisit = visits.get(visits.size() - 1);
         return lastVisit.getDepartureTime().isAfter(maxLastVisitDepartureTime);
     }
-    @JsonIgnore
-    public long getLastVisitDepartureDelayInMinutes() {
-        if (visits.isEmpty()) {
-            return 0;
-        }
-        Visit lastVisit = visits.get(visits.size() -1);
-        return roundDurationToNextOrEqualMinutes(Duration.between(maxLastVisitDepartureTime, lastVisit.getDepartureTime()));
-    }
-    @JsonIgnore
-    public LocalDateTime getLastVisitDepartureTime() {
-        Visit lastVisit = visits.get(visits.size() -1);
-        return lastVisit.getDepartureTime();
-    }
 
     @Override
     public String toString() {

@@ -173,7 +173,7 @@ public class Visit {
     }
 
     @JsonIgnore
-    public long getVehicleDepartureDelayInMinutes() {
+    public long getLastVisitDepartureDelayInMinutes() {
         if (arrivalTime == null) {
             return 0;
         }
