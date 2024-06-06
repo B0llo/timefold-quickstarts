@@ -119,7 +119,7 @@ function getHomeLocationMarker(vehicle) {
     if (marker) {
         return marker;
     }
-    marker = L.circleMarker(vehicle.homeLocation, { color: colorByVehicle(vehicle), fillOpacity: 0.8 });
+    marker = L.circleMarker(vehicle.homeLocation, {color: colorByVehicle(vehicle), fillOpacity: 0.8});
     marker.addTo(homeLocationGroup).bindPopup();
     homeLocationMarkerByIdMap.set(vehicle.id, marker);
     return marker;
@@ -239,13 +239,17 @@ function renderTimelines(routePlan) {
             });
         } else {
             const arrivalTime = JSJoda.LocalDateTime.parse(visit.arrivalTime);
+            const departureTime = JSJoda.LocalDateTime.parse(visit.departureTime);
             const beforeReady = arrivalTime.isBefore(minStartTime);
             const arrivalPlusService = arrivalTime.plus(serviceDuration);
             const afterDue = arrivalPlusService.isAfter(maxEndTime);
 
+            const hasFloatingBreak = departureTime.minus(serviceDuration).isAfter(arrivalTime.isAfter(minStartTime) ? arrivalTime : minStartTime);
+
             const byVehicleElement = $(`<div/>`)
                 .append('<div/>')
                 .append($(`<h5 class="card-title mb-1"/>`).text(visit.name));
+
 
             const byVisitElement = $(`<div/>`)
                 // visit.vehicle is the vehicle.id due to Jackson serialization
@@ -279,15 +283,41 @@ function renderTimelines(routePlan) {
             }
             let serviceElementBackground = afterDue ? '#EF292999' : '#83C15955'
 
-            byVehicleItemData.add({
-                id: visit.id + '_service',
-                group: visit.vehicle, // visit.vehicle is the vehicle.id due to Jackson serialization
-                subgroup: visit.vehicle,
-                content: byVehicleElement.html(),
-                start: visit.startServiceTime,
-                end: visit.departureTime,
-                style: "background-color: " + serviceElementBackground
-            });
+            if (hasFloatingBreak) {
+                const byVehicleBreakElement = $(`<div/>`)
+                    .append($(`<h5 class="card-title mb-1"/>`).text('Break'));
+                byVehicleItemData.add({
+                    id: visit.id + '_break',
+                    group: visit.vehicle, // visit.vehicle is the vehicle.id due to Jackson serialization
+                    subgroup: visit.vehicle,
+                    content: byVehicleBreakElement.html(),
+                    start: visit.arrivalTime,
+                    end: departureTime.minus(serviceDuration).toString(),
+                    style: "background-color: pink"
+                });
+                byVehicleItemData.add({
+                    id: visit.id + '_service',
+                    group: visit.vehicle, // visit.vehicle is the vehicle.id due to Jackson serialization
+                    subgroup: visit.vehicle,
+                    content: byVehicleElement.html(),
+                    start: departureTime.minus(serviceDuration).toString(),
+                    end: visit.departureTime,
+                    style: "background-color: " + serviceElementBackground
+                });
+
+            } else {
+                byVehicleItemData.add({
+                    id: visit.id + '_service',
+                    group: visit.vehicle, // visit.vehicle is the vehicle.id due to Jackson serialization
+                    subgroup: visit.vehicle,
+                    content: byVehicleElement.html(),
+                    start: visit.startServiceTime,
+                    end: visit.departureTime,
+                    style: "background-color: " + serviceElementBackground
+                });
+            }
+
+
             byVisitItemData.add({
                 id: visit.id,
                 group: visit.id,
@@ -303,7 +333,7 @@ function renderTimelines(routePlan) {
 
     $.each(routePlan.vehicles, function (index, vehicle) {
         if (vehicle.visits.length > 0) {
-            let lastVisit = routePlan.visits.filter((visit) => visit.id == vehicle.visits[vehicle.visits.length -1]).pop();
+            let lastVisit = routePlan.visits.filter((visit) => visit.id == vehicle.visits[vehicle.visits.length - 1]).pop();
             if (lastVisit) {
                 byVehicleItemData.add({
                     id: vehicle.id + '_travelBackToHomeLocation',
@@ -349,15 +379,20 @@ function openRecommendationModal(lat, lng) {
 
 function getRecommendationsModal() {
     let formValid = true;
-    formValid = validateFormField(newVisit, 'name' , '#inputName') && formValid;
-    formValid = validateFormField(newVisit, 'demand' , '#inputDemand') && formValid;
-    formValid = validateFormField(newVisit, 'minStartTime' , '#inputMinStartTime') && formValid;
-    formValid = validateFormField(newVisit, 'maxEndTime' , '#inputMaxStartTime') && formValid;
-    formValid = validateFormField(newVisit, 'serviceDuration' , '#inputDuration') && formValid;
+    formValid = validateFormField(newVisit, 'name', '#inputName') && formValid;
+    formValid = validateFormField(newVisit, 'demand', '#inputDemand') && formValid;
+    formValid = validateFormField(newVisit, 'minStartTime', '#inputMinStartTime') && formValid;
+    formValid = validateFormField(newVisit, 'maxEndTime', '#inputMaxStartTime') && formValid;
+    formValid = validateFormField(newVisit, 'serviceDuration', '#inputDuration') && formValid;
     if (formValid) {
         const updatedMinStartTime = JSJoda.LocalDateTime.parse(newVisit['minStartTime'], JSJoda.DateTimeFormatter.ofPattern('yyyy-M-d HH:mm')).format(JSJoda.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         const updatedMaxEndTime = JSJoda.LocalDateTime.parse(newVisit['maxEndTime'], JSJoda.DateTimeFormatter.ofPattern('yyyy-M-d HH:mm')).format(JSJoda.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        const updatedVisit = {...newVisit, serviceDuration: `PT${newVisit['serviceDuration']}M`, minStartTime: updatedMinStartTime, maxEndTime: updatedMaxEndTime};
+        const updatedVisit = {
+            ...newVisit,
+            serviceDuration: `PT${newVisit['serviceDuration']}M`,
+            minStartTime: updatedMinStartTime,
+            maxEndTime: updatedMaxEndTime
+        };
         let updatedVisitList = [...loadedRoutePlan['visits']];
         updatedVisitList.push(updatedVisit);
         let updatedSolution = {...loadedRoutePlan, visits: updatedVisitList};
@@ -379,13 +414,18 @@ function validateFormField(target, fieldName, inputName) {
 function applyRecommendationModal(recommendations) {
     let checkedRecommendation = null;
     recommendations.forEach((recommendation, index) => {
-        if ($('#option'+ index).is(":checked")) {
+        if ($('#option' + index).is(":checked")) {
             checkedRecommendation = recommendations[index];
         }
     });
     const updatedMinStartTime = JSJoda.LocalDateTime.parse(newVisit['minStartTime'], JSJoda.DateTimeFormatter.ofPattern('yyyy-M-d HH:mm')).format(JSJoda.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     const updatedMaxEndTime = JSJoda.LocalDateTime.parse(newVisit['maxEndTime'], JSJoda.DateTimeFormatter.ofPattern('yyyy-M-d HH:mm')).format(JSJoda.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-    const updatedVisit = {...newVisit, serviceDuration: `PT${newVisit['serviceDuration']}M`, minStartTime: updatedMinStartTime, maxEndTime: updatedMaxEndTime};
+    const updatedVisit = {
+        ...newVisit,
+        serviceDuration: `PT${newVisit['serviceDuration']}M`,
+        minStartTime: updatedMinStartTime,
+        maxEndTime: updatedMaxEndTime
+    };
     let updatedVisitList = [...loadedRoutePlan['visits']];
     updatedVisitList.push(updatedVisit);
     let updatedSolution = {...loadedRoutePlan, visits: updatedVisitList};
