@@ -5,7 +5,7 @@ import ai.timefold.solver.core.api.score.constraint.ConstraintRef;
 import ai.timefold.solver.core.api.score.stream.ConstraintJustification;
 import ai.timefold.solver.jackson.api.score.analysis.AbstractScoreAnalysisJacksonDeserializer;
 import org.acme.vehiclerouting.solver.VehicleRoutingConstraintProvider;
-import org.acme.vehiclerouting.solver.justifications.AllowFloatingBreaksJustification;
+import org.acme.vehiclerouting.solver.justifications.DoFloatingBreaksJustification;
 import org.acme.vehiclerouting.solver.justifications.MinimizeTravelTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.ServiceFinishedAfterMaxEndTimeJustification;
 import org.acme.vehiclerouting.solver.justifications.VehicleCapacityJustification;
@@ -29,8 +29,8 @@ public class VRPScoreAnalysisJacksonDeserializer extends AbstractScoreAnalysisJa
                 return (Class<ConstraintJustification_>) VehicleCapacityJustification.class;
             case VehicleRoutingConstraintProvider.SERVICE_FINISHED_AFTER_MAX_END_TIME:
                 return (Class<ConstraintJustification_>) ServiceFinishedAfterMaxEndTimeJustification.class;
-            case VehicleRoutingConstraintProvider.ALLOW_FLOATING_BREAKS:
-                return (Class<ConstraintJustification_>) AllowFloatingBreaksJustification.class;
+            case VehicleRoutingConstraintProvider.DO_FLOATING_BREAKS:
+                return (Class<ConstraintJustification_>) DoFloatingBreaksJustification.class;
             default:
                 throw new UnsupportedOperationException("Deserialization of (%s) constraint not supported, please extend %s."
                         .formatted(constraintRef.constraintName(), this.getClass().getName()));
