@@ -139,10 +139,10 @@ public class Visit {
 
 
     public boolean hadABreakHere() {
-        return arrivalTime.plus(serviceDuration).isBefore(getDepartureTime());
+        return arrivalTime.plus(serviceDuration).isBefore(getDepartureTime()) && arrivalTime.isAfter(vehicle.getFloatingBreak().getTriggerTime());
     }
     public boolean hadNoBreakHere() {
-        return !arrivalTime.plus(serviceDuration).isBefore(getDepartureTime());
+        return !hadABreakHere();
     }
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
