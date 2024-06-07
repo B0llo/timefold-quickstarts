@@ -54,8 +54,8 @@ public class VehicleRoutingConstraintProvider implements ConstraintProvider {
     }
     protected Constraint doFloatingBreaks(ConstraintFactory factory) {
         return factory.forEach(Visit.class)
-                .filter(Visit::hadNoBreakHere)
-                .penalize(HardSoftLongScore.ONE_HARD)
+                .filter(Visit::hadABreakHere)
+                .reward(HardSoftLongScore.ONE_HARD)
                 .justifyWith((visit, score) -> new DoFloatingBreaksJustification(visit.getId(),
                         visit.hadABreakHere()))
                 .asConstraint(DO_FLOATING_BREAKS);
